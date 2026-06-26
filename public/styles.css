@@ -115,7 +115,7 @@ html, body {
   border-radius: 10px;
   margin-bottom: 18px;
 }
-.filter-label { font-size: 12px; color: var(--muted); }
+.filter-label { font-size: 12px; color: var(--muted); margin-left: 6px; }
 .filter-select,
 .filter-input {
   background: var(--surface2);

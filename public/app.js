@@ -121,7 +121,7 @@
       <div class="filter-bar">
         <span class="filter-label">Section:</span>
         <select class="filter-select" id="section-sel">${sectionOpts}</select>
-        <span class="filter-label" style="margin-left:6px">Sort:</span>
+        <span class="filter-label">Sort:</span>
         ${sortBtns}
         <button class="sort-dir-btn" id="sort-dir">${S.sortDir === 'desc' ? '↓' : '↑'}</button>
         <input class="filter-input" id="search-input" type="text" placeholder="Search title…" value="${escHtml(S.search)}">
@@ -437,8 +437,10 @@
       <div class="state-view">
         <h3 class="state-heading" style="color:var(--bad)">Something went wrong</h3>
         <p class="state-sub">${escHtml(msg)}</p>
-        <button class="btn btn-primary" onclick="location.reload()">Reload page</button>
+        <button class="btn btn-primary" id="reload-btn">Reload page</button>
       </div>`;
+    const reloadBtn = document.getElementById('reload-btn');
+    if (reloadBtn) reloadBtn.addEventListener('click', () => location.reload());
   }
 
   function showEmpty() {
