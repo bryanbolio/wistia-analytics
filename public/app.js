@@ -159,7 +159,7 @@
           <div class="metric-row"><span class="metric-name">Page Loads</span><span class="metric-val">${fmtInt(s.pageLoads)}</span></div>
           <div class="metric-row"><span class="metric-name">Hours Watched</span><span class="metric-val">${fmtHours(s.hoursWatched)}</span></div>
         </div>
-        <div class="engagement-bar"><div class="fill ${engClass(eng)}" style="width:${pct}%"></div></div>
+        <div class="engagement-bar"><div class="fill ${engClass(eng)}" style="--bar-w:${pct}%"></div></div>
         <a class="card-link" href="${wUrl}" target="_blank" rel="noopener">Open in Wistia ↗</a>
       </div>`;
   }
@@ -435,7 +435,7 @@
   function showError(msg) {
     document.getElementById('root').innerHTML = `
       <div class="state-view">
-        <h3 class="state-heading" style="color:var(--bad)">Something went wrong</h3>
+        <h3 class="state-heading error-heading">Something went wrong</h3>
         <p class="state-sub">${escHtml(msg)}</p>
         <button class="btn btn-primary" id="reload-btn">Reload page</button>
       </div>`;

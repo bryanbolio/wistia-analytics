@@ -34,7 +34,11 @@ async function getStats({ force = false } = {}) {
 
   const videos = await fetchAll(token);
   const data = { fetchedAt: Date.now(), projectId: 'stce6aea96', videos };
-  cache.write(CACHE_FILE, data);
+  try {
+    cache.write(CACHE_FILE, data);
+  } catch (err) {
+    console.error('Cache write failed (continuing with in-memory data):', err.message);
+  }
   inMemoryCache = data;
   return { ...data, cached: false };
 }
