@@ -25,6 +25,8 @@ async function getStats({ force = false } = {}) {
       inMemoryCache = disk;
       return { ...disk, cached: true };
     }
+    // No cache exists — return empty state; live fetch only on /api/refresh
+    return { videos: null };
   }
 
   const token = process.env.WISTIA_API_TOKEN;
