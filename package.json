@@ -1,0 +1,14 @@
+{
+  "name": "wistia-analytics",
+  "version": "1.0.0",
+  "description": "Training Hub video analytics dashboard",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test tests/"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "dotenv": "^16.3.1"
+  }
+}
