@@ -219,7 +219,7 @@
     const flag   = isFlagged(v) ? '<span class="flag-badge">⚠ Underperforming</span>' : '';
     const health = videoHealth(v);
     const trend  = health ? fmtTrend(health.trend) : { text: '—', cls: '' };
-    const wUrl   = `https://doorloop.wistia.com/medias/${escHtml(v.hashedId)}`;
+    const wUrl   = `https://app.wistia.com/stats/medias/${escHtml(v.hashedId)}`;
 
     const healthBadge = health
       ? `<span class="health-badge health-${health.band}" title="Quality ${health.quality}/40 · Discover ${health.discover}/30 · Momentum ${health.momentum}/30">${health.total}</span>`
@@ -243,7 +243,7 @@
           <div class="metric-row"><span class="metric-name">Published</span><span class="metric-val">${fmtDate(v.createdAt)}</span></div>
         </div>
         <div class="engagement-bar"><div class="fill ${engClass(eng)}" style="--bar-w:${pct}%"></div></div>
-        <a class="card-link" href="${wUrl}" target="_blank" rel="noopener">Open in Wistia ↗</a>
+        <a class="card-link" href="${wUrl}" target="_blank" rel="noopener">View Analytics &amp; Heatmap ↗</a>
       </div>`;
   }
 
