@@ -23,7 +23,8 @@
     { key: 'engagement', label: 'Engagement' },
     { key: 'playRate',   label: 'Play Rate' },
     { key: 'duration',   label: 'Duration' },
-    { key: 'hours',      label: 'Hours' }
+    { key: 'hours',      label: 'Hours' },
+    { key: 'health',     label: 'Health' }
   ];
 
   const SECTION_COLS = [
@@ -71,6 +72,7 @@
   // ── Metric helpers ─────────────────────────────────────────────────────────
   function metricVal(video, key) {
     if (key === 'duration') return video.duration ?? -Infinity;
+    if (key === 'health')   { const h = videoHealth(video); return h ? h.total : -Infinity; }
     const st = video.stats;
     if (!st) return -Infinity;
     if (key === 'plays')      return st.plays        ?? -Infinity;
@@ -90,6 +92,68 @@
 
   function isFlagged(video) {
     return video.stats != null && video.stats.engagement < S.thresholds.engagement.bad;
+  }
+
+  // ── Analysis helpers ───────────────────────────────────────────────────────
+  function engBenchmark(durationSecs) {
+    const m = (durationSecs || 0) / 60;
+    if (m < 2) return 0.70;
+    if (m < 4) return 0.60;
+    if (m < 7) return 0.50;
+    return 0.40;
+  }
+
+  function computeTrend(timeline) {
+    const d30 = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
+    const d60 = new Date(Date.now() - 60 * 864e5).toISOString().slice(0, 10);
+    const last30 = (timeline || []).filter(t => t.date >= d30).reduce((s, t) => s + t.plays, 0);
+    const prev30 = (timeline || []).filter(t => t.date >= d60 && t.date < d30).reduce((s, t) => s + t.plays, 0);
+    if (last30 === 0 && prev30 === 0) return null;
+    if (prev30 === 0) return { dir: 'new', pct: null, last30 };
+    const pct = (last30 - prev30) / prev30;
+    return { dir: pct >= 0.10 ? 'up' : pct <= -0.10 ? 'down' : 'flat', pct, last30, prev30 };
+  }
+
+  function fmtTrend(trend) {
+    if (!trend) return { text: '—', cls: '' };
+    if (trend.dir === 'new')  return { text: 'New',    cls: 'trend-flat' };
+    if (trend.dir === 'flat') return { text: '→ Flat', cls: 'trend-flat' };
+    const p = Math.abs(Math.round(trend.pct * 100));
+    if (trend.dir === 'up')   return { text: `↑ +${p}%`, cls: 'trend-up' };
+    return { text: `↓ −${p}%`, cls: 'trend-down' };
+  }
+
+  function videoHealth(v) {
+    if (!v.stats) return null;
+    const s = v.stats;
+
+    // Quality (40 pts): duration-adjusted engagement
+    const benchmark  = engBenchmark(v.duration);
+    const qualityPts = Math.min((s.engagement || 0) / benchmark, 1) * 40;
+
+    // Discoverability (30 pts): play rate vs 30% target
+    const discoverPts = Math.min((s.playRate || 0) / 0.30, 1) * 30;
+
+    // Momentum (30 pts): 30d vs prior 30d
+    const trend = computeTrend(v.timeline);
+    const momentumPts = !trend || trend.dir === 'new' ? 20
+      : trend.dir === 'up'   ? 30
+      : trend.dir === 'flat' ? 20
+      : trend.pct >= -0.30   ? 10 : 0;
+
+    const total = Math.round(qualityPts + discoverPts + momentumPts);
+    const band  = total >= 80 ? 'healthy' : total >= 60 ? 'monitor' : total >= 40 ? 'attention' : 'rebuild';
+    return { total, quality: Math.round(qualityPts), discover: Math.round(discoverPts), momentum: momentumPts, band, trend };
+  }
+
+  function videoQuadrant(v) {
+    if (!v.stats) return null;
+    const highPlay = (v.stats.playRate  || 0) >= 0.25;
+    const highEng  = (v.stats.engagement || 0) >= engBenchmark(v.duration);
+    if ( highPlay &&  highEng) return 'performer';
+    if ( highPlay && !highEng) return 'content';
+    if (!highPlay &&  highEng) return 'placement';
+    return 'rebuild';
   }
 
   // ── Render: KPI Strip ──────────────────────────────────────────────────────
@@ -149,17 +213,23 @@
           <div class="card-error-msg">Data unavailable${v.error ? ' — ' + escHtml(v.error) : ''}</div>
         </div>`;
     }
-    const s   = v.stats;
-    const eng = s.engagement ?? 0;
-    const pct = Math.max(0, Math.min(100, eng * 100));
-    const flag = isFlagged(v) ? '<span class="flag-badge">⚠ Underperforming</span>' : '';
-    const wUrl = `https://doorloop.wistia.com/medias/${escHtml(v.hashedId)}`;
+    const s      = v.stats;
+    const eng    = s.engagement ?? 0;
+    const pct    = Math.max(0, Math.min(100, eng * 100));
+    const flag   = isFlagged(v) ? '<span class="flag-badge">⚠ Underperforming</span>' : '';
+    const health = videoHealth(v);
+    const trend  = health ? fmtTrend(health.trend) : { text: '—', cls: '' };
+    const wUrl   = `https://doorloop.wistia.com/medias/${escHtml(v.hashedId)}`;
+
+    const healthBadge = health
+      ? `<span class="health-badge health-${health.band}" title="Quality ${health.quality}/40 · Discover ${health.discover}/30 · Momentum ${health.momentum}/30">${health.total}</span>`
+      : '';
 
     return `
       <div class="video-card${isFlagged(v) ? ' flagged' : ''}">
         <div class="card-top">
           <span class="section-badge">${escHtml(v.section)}</span>
-          ${flag}
+          <div class="card-top-right">${flag}${healthBadge}</div>
         </div>
         <h3 class="video-title">${escHtml(v.name)}</h3>
         <div class="metrics">
@@ -169,6 +239,7 @@
           <div class="metric-row"><span class="metric-name">Engagement</span><span class="metric-val">${fmtPct(s.engagement)}</span></div>
           <div class="metric-row"><span class="metric-name">Duration</span><span class="metric-val">${fmtDuration(v.duration)}</span></div>
           <div class="metric-row"><span class="metric-name">Hours Watched</span><span class="metric-val">${fmtHours(s.hoursWatched)}</span></div>
+          <div class="metric-row"><span class="metric-name">30d Trend</span><span class="metric-val ${trend.cls}">${trend.text}</span></div>
           <div class="metric-row"><span class="metric-name">Published</span><span class="metric-val">${fmtDate(v.createdAt)}</span></div>
         </div>
         <div class="engagement-bar"><div class="fill ${engClass(eng)}" style="--bar-w:${pct}%"></div></div>
@@ -342,6 +413,61 @@
     });
   }
 
+  // ── Render: Quadrant Panel ─────────────────────────────────────────────────
+  function renderQuadrantPanel(videos) {
+    const scored = videos.filter(v => v.stats);
+    const buckets = { performer: [], placement: [], content: [], rebuild: [] };
+    scored.forEach(v => {
+      const q = videoQuadrant(v);
+      if (q) buckets[q].push(v);
+    });
+
+    function quadrantList(vids) {
+      if (!vids.length) return '<p class="quad-empty">None</p>';
+      return vids.map(v => `<div class="quad-item">${escHtml(v.name)}</div>`).join('');
+    }
+
+    return `
+      <div class="quadrant-panel">
+        <h2 class="block-heading">Quadrant Analysis</h2>
+        <p class="quadrant-desc">Play rate ≥25% = high reach · Engagement ≥ duration benchmark = high quality</p>
+        <div class="quadrant-grid">
+          <div class="quad-cell quad-performer">
+            <div class="quad-header">
+              <span class="quad-title">High Performers</span>
+              <span class="quad-count">${buckets.performer.length}</span>
+            </div>
+            <div class="quad-meta">High reach · High quality</div>
+            <div class="quad-list">${quadrantList(buckets.performer)}</div>
+          </div>
+          <div class="quad-cell quad-placement">
+            <div class="quad-header">
+              <span class="quad-title">Placement Problem</span>
+              <span class="quad-count">${buckets.placement.length}</span>
+            </div>
+            <div class="quad-meta">Low reach · High quality — needs better surfacing</div>
+            <div class="quad-list">${quadrantList(buckets.placement)}</div>
+          </div>
+          <div class="quad-cell quad-content">
+            <div class="quad-header">
+              <span class="quad-title">Content Problem</span>
+              <span class="quad-count">${buckets.content.length}</span>
+            </div>
+            <div class="quad-meta">High reach · Low quality — content needs work</div>
+            <div class="quad-list">${quadrantList(buckets.content)}</div>
+          </div>
+          <div class="quad-cell quad-rebuild">
+            <div class="quad-header">
+              <span class="quad-title">Rebuild Needed</span>
+              <span class="quad-count">${buckets.rebuild.length}</span>
+            </div>
+            <div class="quad-meta">Low reach · Low quality — full rethink</div>
+            <div class="quad-list">${quadrantList(buckets.rebuild)}</div>
+          </div>
+        </div>
+      </div>`;
+  }
+
   // ── Render: Full Page ──────────────────────────────────────────────────────
   function renderAll() {
     const sections = [...new Set(S.videos.map(v => v.section))].sort();
@@ -360,6 +486,7 @@
       renderFilterBar(sections) +
       renderGrid(filtered) +
       renderSectionTable() +
+      renderQuadrantPanel(S.videos) +
       renderChartPanel();
 
     document.getElementById('last-updated').textContent =

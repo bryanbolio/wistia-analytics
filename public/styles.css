@@ -241,6 +241,94 @@ html, body {
 .card-link:hover { text-decoration: underline; }
 .card-error-msg { font-size: 12px; color: var(--muted); font-style: italic; }
 
+/* ── Health Badge ── */
+.card-top-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.health-badge {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+  cursor: default;
+  white-space: nowrap;
+}
+.health-healthy  { background: rgba(34,197,94,0.15);  color: #22C55E; border: 1px solid rgba(34,197,94,0.35); }
+.health-monitor  { background: rgba(79,116,255,0.15); color: #7A9FFF; border: 1px solid rgba(79,116,255,0.35); }
+.health-attention{ background: rgba(245,158,11,0.15); color: #F59E0B; border: 1px solid rgba(245,158,11,0.35); }
+.health-rebuild  { background: rgba(239,68,68,0.12);  color: #EF4444; border: 1px solid rgba(239,68,68,0.30); }
+
+/* ── Trend Colors ── */
+.trend-up   { color: #22C55E; font-weight: 600; }
+.trend-down { color: #EF4444; font-weight: 600; }
+.trend-flat { color: var(--muted); }
+
+/* ── Quadrant Panel ── */
+.quadrant-panel { margin-bottom: 32px; }
+.quadrant-desc {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0 0 14px;
+}
+.quadrant-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.quad-cell {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  min-height: 140px;
+}
+.quad-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.quad-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--heading);
+}
+.quad-count {
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--heading);
+}
+.quad-meta {
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+.quad-list { display: flex; flex-direction: column; gap: 3px; }
+.quad-item {
+  font-size: 12px;
+  color: var(--text);
+  padding: 3px 6px;
+  background: var(--surface2);
+  border-radius: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.quad-empty { font-size: 12px; color: var(--muted); margin: 0; }
+.quad-performer { border-color: rgba(34,197,94,0.25); }
+.quad-placement { border-color: rgba(79,116,255,0.25); }
+.quad-content   { border-color: rgba(245,158,11,0.25); }
+.quad-rebuild   { border-color: rgba(239,68,68,0.25); }
+.quad-performer .quad-count { color: #22C55E; }
+.quad-placement .quad-count { color: #7A9FFF; }
+.quad-content   .quad-count { color: #F59E0B; }
+.quad-rebuild   .quad-count { color: #EF4444; }
+
 /* ── Section Table ── */
 .section-block { margin-bottom: 32px; }
 .block-heading {
