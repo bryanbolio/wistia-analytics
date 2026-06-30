@@ -22,7 +22,7 @@
     { key: 'visitors',   label: 'Visitors' },
     { key: 'engagement', label: 'Engagement' },
     { key: 'playRate',   label: 'Play Rate' },
-    { key: 'pageLoads',  label: 'Page Loads' },
+    { key: 'duration',   label: 'Duration' },
     { key: 'hours',      label: 'Hours' }
   ];
 
@@ -70,13 +70,13 @@
 
   // ── Metric helpers ─────────────────────────────────────────────────────────
   function metricVal(video, key) {
+    if (key === 'duration') return video.duration ?? -Infinity;
     const st = video.stats;
     if (!st) return -Infinity;
     if (key === 'plays')      return st.plays        ?? -Infinity;
     if (key === 'visitors')   return st.visitors     ?? -Infinity;
     if (key === 'engagement') return st.engagement   ?? -Infinity;
     if (key === 'playRate')   return st.playRate      ?? -Infinity;
-    if (key === 'pageLoads')  return st.pageLoads    ?? -Infinity;
     if (key === 'hours')      return st.hoursWatched ?? -Infinity;
     return -Infinity;
   }
@@ -168,7 +168,6 @@
           <div class="metric-row"><span class="metric-name">Play Rate</span><span class="metric-val">${fmtPct(s.playRate)}</span></div>
           <div class="metric-row"><span class="metric-name">Engagement</span><span class="metric-val">${fmtPct(s.engagement)}</span></div>
           <div class="metric-row"><span class="metric-name">Duration</span><span class="metric-val">${fmtDuration(v.duration)}</span></div>
-          <div class="metric-row"><span class="metric-name">Page Loads</span><span class="metric-val">${fmtInt(s.pageLoads)}</span></div>
           <div class="metric-row"><span class="metric-name">Hours Watched</span><span class="metric-val">${fmtHours(s.hoursWatched)}</span></div>
           <div class="metric-row"><span class="metric-name">Published</span><span class="metric-val">${fmtDate(v.createdAt)}</span></div>
         </div>
