@@ -53,6 +53,10 @@
     const s = Math.round(secs % 60);
     return m + 'm ' + String(s).padStart(2, '0') + 's';
   }
+  function fmtDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
   function fmtTime(ts) {
     if (!ts) return '';
     return new Date(ts).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
@@ -166,8 +170,18 @@
           <div class="metric-row"><span class="metric-name">Duration</span><span class="metric-val">${fmtDuration(v.duration)}</span></div>
           <div class="metric-row"><span class="metric-name">Page Loads</span><span class="metric-val">${fmtInt(s.pageLoads)}</span></div>
           <div class="metric-row"><span class="metric-name">Hours Watched</span><span class="metric-val">${fmtHours(s.hoursWatched)}</span></div>
+          <div class="metric-row"><span class="metric-name">Published</span><span class="metric-val">${fmtDate(v.createdAt)}</span></div>
         </div>
         <div class="engagement-bar"><div class="fill ${engClass(eng)}" style="--bar-w:${pct}%"></div></div>
+        ${v.embedPages && v.embedPages.length ? `
+        <div class="embed-pages">
+          <div class="embed-pages-label">Top embed pages</div>
+          ${v.embedPages.map(p => `
+            <div class="embed-page-row">
+              <a class="embed-page-url" href="${escHtml(p.url)}" target="_blank" rel="noopener" title="${escHtml(p.url)}">${escHtml(p.url.replace(/^https?:\/\//, ''))}</a>
+              <span class="embed-page-count">${fmtInt(p.count)}</span>
+            </div>`).join('')}
+        </div>` : ''}
         <a class="card-link" href="${wUrl}" target="_blank" rel="noopener">Open in Wistia ↗</a>
       </div>`;
   }

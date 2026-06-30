@@ -361,6 +361,14 @@ html, body {
 .state-heading { font-size: 16px; font-weight: 600; color: var(--heading); margin: 0; }
 .state-sub { margin: 0; font-size: 13px; }
 
+/* ── Embed Pages ── */
+.embed-pages { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+.embed-pages-label { font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.embed-page-row { display: flex; align-items: baseline; gap: 6px; margin-bottom: 4px; }
+.embed-page-url { flex: 1; font-size: 11px; color: var(--accent); text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.embed-page-url:hover { text-decoration: underline; }
+.embed-page-count { font-size: 11px; color: var(--muted); white-space: nowrap; }
+
 /* ── Responsive ── */
 @media (max-width: 1200px) {
   .video-grid { grid-template-columns: repeat(2, 1fr); }
