@@ -14,6 +14,7 @@
     sectionSortDir: 'desc',
     chartVideos:   [],
     chartDays:     30,
+    chartMode:     'normal',
     chartInstance: null
   };
 
@@ -156,41 +157,6 @@
     return 'rebuild';
   }
 
-  // ── Render: Sparkline ──────────────────────────────────────────────────────
-  function renderSparkline(v) {
-    const d30 = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
-    const pts  = (v.timeline || [])
-      .filter(t => t.date >= d30)
-      .sort((a, b) => a.date.localeCompare(b.date));
-    if (pts.length < 3) return '';
-
-    const W = 200, H = 36, PAD = 2;
-    const vals  = pts.map(t => t.plays);
-    const max   = Math.max(...vals, 1);
-    const min   = Math.min(...vals);
-    const range = max - min || 1;
-
-    const coords = vals.map((p, i) => {
-      const x = (i / (vals.length - 1)) * W;
-      const y = H - PAD - ((p - min) / range) * (H - PAD * 2);
-      return [x, y];
-    });
-    const linePts = coords.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
-    const areaPts = [`0,${H}`, ...coords.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`), `${W},${H}`].join(' ');
-
-    const health = videoHealth(v);
-    const trend  = health && health.trend;
-    const color  = !trend || trend.dir === 'flat' || trend.dir === 'new'
-      ? '#7D8BA5' : trend.dir === 'up' ? '#22C55E' : '#EF4444';
-
-    return `<div class="sparkline-wrap">
-      <svg class="sparkline" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-        <polygon points="${areaPts}" fill="${color}" opacity="0.12"/>
-        <polyline points="${linePts}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
-      </svg>
-    </div>`;
-  }
-
   // ── Render: KPI Strip ──────────────────────────────────────────────────────
   function renderKPIs(videos) {
     let plays = 0, visitors = 0, hours = 0, loads = 0;
@@ -278,7 +244,6 @@
           <div class="metric-row"><span class="metric-name">Published</span><span class="metric-val">${fmtDate(v.createdAt)}</span></div>
         </div>
         <div class="engagement-bar"><div class="fill ${engClass(eng)}" style="--bar-w:${pct}%"></div></div>
-        ${renderSparkline(v)}
         <a class="card-link" href="${wUrl}" target="_blank" rel="noopener">View Analytics &amp; Heatmap ↗</a>
       </div>`;
   }
@@ -357,20 +322,31 @@
         return `<button class="picker-chip${sel ? ' selected' : ''}" data-vid="${escHtml(v.hashedId)}">${escHtml(v.name)}</button>`;
       }).join('');
 
+    const isCompare = S.chartMode === 'compare';
+
+    const dateRangeCtrl = isCompare
+      ? '<span class="compare-period-label">Last 30d vs Prior 30d</span>'
+      : `<span class="chart-label">Date range:</span>
+         <select class="chart-select" id="chart-days">
+           <option value="30"${S.chartDays === 30 ? ' selected' : ''}>Last 30 days</option>
+           <option value="60"${S.chartDays === 60 ? ' selected' : ''}>Last 60 days</option>
+           <option value="90"${S.chartDays === 90 ? ' selected' : ''}>Last 90 days</option>
+         </select>`;
+
+    const emptyMsg = isCompare
+      ? 'Select one or more videos above to compare last 30 days vs prior 30 days.'
+      : 'Select one or more videos above to see their trend.';
+
     const canvas = S.chartVideos.length
       ? '<div class="chart-canvas-wrap"><canvas id="chart-canvas"></canvas></div>'
-      : '<div class="chart-empty">Select one or more videos above to see their trend.</div>';
+      : `<div class="chart-empty">${emptyMsg}</div>`;
 
     return `
       <div class="chart-panel">
-        <h2 class="block-heading">Trend — Daily Plays</h2>
+        <h2 class="block-heading">${isCompare ? 'Period Comparison — Last 30d vs Prior 30d' : 'Trend — Daily Plays'}</h2>
         <div class="chart-controls">
-          <span class="chart-label">Date range:</span>
-          <select class="chart-select" id="chart-days">
-            <option value="30"${S.chartDays === 30 ? ' selected' : ''}>Last 30 days</option>
-            <option value="60"${S.chartDays === 60 ? ' selected' : ''}>Last 60 days</option>
-            <option value="90"${S.chartDays === 90 ? ' selected' : ''}>Last 90 days</option>
-          </select>
+          ${dateRangeCtrl}
+          <button class="chart-mode-btn${isCompare ? ' active' : ''}" id="chart-compare">Compare Periods</button>
         </div>
         <div class="video-picker" id="video-picker">${chips}</div>
         ${canvas}
@@ -378,6 +354,23 @@
   }
 
   // ── Chart Drawing ──────────────────────────────────────────────────────────
+  const CHART_OPTS_BASE = {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { labels: { color: '#CDD5E0', font: { size: 12 }, boxWidth: 12 } },
+      tooltip: {
+        backgroundColor: '#1C2435', borderColor: '#2A3347', borderWidth: 1,
+        titleColor: '#EEF2FF', bodyColor: '#CDD5E0'
+      }
+    },
+    scales: {
+      x: { ticks: { color: '#7D8BA5', maxTicksLimit: 10, font: { size: 11 } }, grid: { color: '#2A3347' } },
+      y: { beginAtZero: true, ticks: { color: '#7D8BA5', font: { size: 11 } }, grid: { color: '#2A3347' } }
+    }
+  };
+
   function buildDateRange(days) {
     const dates = [];
     for (let i = days - 1; i >= 0; i--) {
@@ -390,12 +383,11 @@
   function drawChart() {
     const canvas = document.getElementById('chart-canvas');
     if (!canvas) return;
+    if (S.chartInstance) { S.chartInstance.destroy(); S.chartInstance = null; }
+    if (S.chartMode === 'compare') { drawCompareChart(canvas); } else { drawNormalChart(canvas); }
+  }
 
-    if (S.chartInstance) {
-      S.chartInstance.destroy();
-      S.chartInstance = null;
-    }
-
+  function drawNormalChart(canvas) {
     const dates    = buildDateRange(S.chartDays);
     const datasets = S.chartVideos.map((hashedId, idx) => {
       const video = S.videos.find(v => v.hashedId === hashedId);
@@ -403,49 +395,64 @@
       const tlMap = new Map((video.timeline || []).map(t => [t.date, t.plays]));
       const color = CHART_COLORS[idx % CHART_COLORS.length];
       return {
-        label:           video.name,
-        data:            dates.map(d => tlMap.get(d) ?? 0),
-        borderColor:     color,
-        backgroundColor: color + '22',
-        borderWidth:     2,
-        pointRadius:     2,
-        pointHoverRadius: 5,
-        tension:         0.3,
-        fill:            false
+        label: video.name,
+        data:  dates.map(d => tlMap.get(d) ?? 0),
+        borderColor: color, backgroundColor: color + '22',
+        borderWidth: 2, pointRadius: 2, pointHoverRadius: 5, tension: 0.3, fill: false
       };
     }).filter(Boolean);
 
     S.chartInstance = new Chart(canvas, {
       type: 'line',
       data: { labels: dates, datasets },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: { mode: 'index', intersect: false },
-        plugins: {
-          legend: {
-            labels: { color: '#CDD5E0', font: { size: 12 }, boxWidth: 12 }
-          },
-          tooltip: {
-            backgroundColor: '#1C2435',
-            borderColor: '#2A3347',
-            borderWidth: 1,
-            titleColor: '#EEF2FF',
-            bodyColor: '#CDD5E0'
+      options: CHART_OPTS_BASE
+    });
+  }
+
+  function drawCompareChart(canvas) {
+    const last30Dates = buildDateRange(30);
+    const prev30Dates = buildDateRange(60).slice(0, 30);
+    const dayLabels   = Array.from({ length: 30 }, (_, i) => `Day ${i + 1}`);
+
+    const datasets = [];
+    S.chartVideos.forEach((hashedId, idx) => {
+      const video = S.videos.find(v => v.hashedId === hashedId);
+      if (!video) return;
+      const tlMap = new Map((video.timeline || []).map(t => [t.date, t.plays]));
+      const color = CHART_COLORS[idx % CHART_COLORS.length];
+
+      datasets.push({
+        label: video.name + ' — Last 30d',
+        data:  last30Dates.map(d => tlMap.get(d) ?? 0),
+        borderColor: color, backgroundColor: color + '22',
+        borderWidth: 2, pointRadius: 2, pointHoverRadius: 5, tension: 0.3, fill: false
+      });
+      datasets.push({
+        label: video.name + ' — Prior 30d',
+        data:  prev30Dates.map(d => tlMap.get(d) ?? 0),
+        borderColor: color, backgroundColor: 'transparent',
+        borderDash: [5, 4],
+        borderWidth: 2, pointRadius: 2, pointHoverRadius: 5, tension: 0.3, fill: false
+      });
+    });
+
+    const opts = Object.assign({}, CHART_OPTS_BASE, {
+      plugins: Object.assign({}, CHART_OPTS_BASE.plugins, {
+        tooltip: Object.assign({}, CHART_OPTS_BASE.plugins.tooltip, {
+          callbacks: {
+            title(items) {
+              const i = items[0]?.dataIndex ?? 0;
+              return `Last 30d: ${last30Dates[i]}  ·  Prior 30d: ${prev30Dates[i]}`;
+            }
           }
-        },
-        scales: {
-          x: {
-            ticks: { color: '#7D8BA5', maxTicksLimit: 10, font: { size: 11 } },
-            grid:  { color: '#2A3347' }
-          },
-          y: {
-            beginAtZero: true,
-            ticks: { color: '#7D8BA5', font: { size: 11 } },
-            grid:  { color: '#2A3347' }
-          }
-        }
-      }
+        })
+      })
+    });
+
+    S.chartInstance = new Chart(canvas, {
+      type: 'line',
+      data: { labels: dayLabels, datasets },
+      options: opts
     });
   }
 
@@ -659,6 +666,14 @@
     if (chartDaysSel) {
       chartDaysSel.addEventListener('change', e => {
         S.chartDays = parseInt(e.target.value, 10);
+        renderAll();
+      });
+    }
+
+    const compareBtn = document.getElementById('chart-compare');
+    if (compareBtn) {
+      compareBtn.addEventListener('click', () => {
+        S.chartMode = S.chartMode === 'compare' ? 'normal' : 'compare';
         renderAll();
       });
     }
