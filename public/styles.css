@@ -469,11 +469,27 @@ html, body {
 .state-heading { font-size: 16px; font-weight: 600; color: var(--heading); margin: 0; }
 .state-sub { margin: 0; font-size: 13px; }
 
-/* ── Trend tooltip ── */
+/* ── Click tooltip trigger ── */
+[data-tip] { cursor: pointer; }
 .metric-tip {
-  cursor: help;
   text-decoration: underline dotted;
   text-underline-offset: 2px;
+}
+
+/* ── Click tooltip popup ── */
+.tip-popup {
+  position: fixed;
+  z-index: 1000;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 13px;
+  font-size: 12px;
+  color: var(--text);
+  max-width: 300px;
+  line-height: 1.55;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
 }
 
 /* ── Methodology Panel ── */

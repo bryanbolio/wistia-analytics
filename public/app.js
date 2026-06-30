@@ -223,7 +223,7 @@
     const wUrl   = `https://app.wistia.com/stats/medias/${escHtml(v.hashedId)}`;
 
     const healthBadge = health
-      ? `<span class="health-badge health-${health.band}" title="Quality ${health.quality}/40 · Discover ${health.discover}/30 · Momentum ${health.momentum}/30">${health.total}</span>`
+      ? `<span class="health-badge health-${health.band}" data-tip="Quality ${health.quality}/40 · Discover ${health.discover}/30 · Momentum ${health.momentum}/30">${health.total}</span>`
       : '';
 
     return `
@@ -240,7 +240,7 @@
           <div class="metric-row"><span class="metric-name">Engagement</span><span class="metric-val">${fmtPct(s.engagement)}</span></div>
           <div class="metric-row"><span class="metric-name">Duration</span><span class="metric-val">${fmtDuration(v.duration)}</span></div>
           <div class="metric-row"><span class="metric-name">Hours Watched</span><span class="metric-val">${fmtHours(s.hoursWatched)}</span></div>
-          <div class="metric-row"><span class="metric-name metric-tip" title="Compares total plays in the last 30 days vs the prior 30 days (days 31–60). ↑ Up = +10% or more · → Flat = within ±10% · ↓ Down = −10% or more. No data in either window = —">30d Trend ⓘ</span><span class="metric-val ${trend.cls}">${trend.text}</span></div>
+          <div class="metric-row"><span class="metric-name metric-tip" data-tip="Compares total plays in the last 30 days vs the prior 30 days (days 31–60). ↑ Up = +10% or more · → Flat = within ±10% · ↓ Down = −10% or more. No data in either window = —">30d Trend ⓘ</span><span class="metric-val ${trend.cls}">${trend.text}</span></div>
           <div class="metric-row"><span class="metric-name">Published</span><span class="metric-val">${fmtDate(v.createdAt)}</span></div>
         </div>
         <div class="engagement-bar"><div class="fill ${engClass(eng)}" style="--bar-w:${pct}%"></div></div>
@@ -748,7 +748,47 @@
     }
   }
 
+  // ── Click Tooltip ──────────────────────────────────────────────────────────
+  function initTooltip() {
+    const popup = document.createElement('div');
+    popup.className = 'tip-popup';
+    popup.hidden = true;
+    document.body.appendChild(popup);
+
+    let activeEl = null;
+
+    document.addEventListener('click', e => {
+      const trigger = e.target.closest('[data-tip]');
+      if (trigger) {
+        if (activeEl === trigger) {
+          popup.hidden = true;
+          activeEl = null;
+          return;
+        }
+        activeEl = trigger;
+        popup.textContent = trigger.dataset.tip;
+        popup.hidden = false;
+
+        const r  = trigger.getBoundingClientRect();
+        const pw = popup.offsetWidth;
+        const ph = popup.offsetHeight;
+        let left = r.left;
+        let top  = r.bottom + 8;
+
+        if (left + pw > window.innerWidth  - 12) left = Math.max(8, window.innerWidth  - pw - 12);
+        if (top  + ph > window.innerHeight - 12) top  = r.top - ph - 8;
+
+        popup.style.left = left + 'px';
+        popup.style.top  = top  + 'px';
+      } else {
+        popup.hidden = true;
+        activeEl = null;
+      }
+    });
+  }
+
   // ── Bootstrap ──────────────────────────────────────────────────────────────
+  initTooltip();
   document.getElementById('refresh-btn').addEventListener('click', () => load('/api/refresh'));
   load();
 })();
