@@ -173,12 +173,12 @@
     });
     return `
       <div class="kpi-strip">
-        <div class="kpi"><div class="kpi-label">Total Plays</div><div class="kpi-value">${fmtInt(plays)}</div></div>
-        <div class="kpi"><div class="kpi-label">Unique Visitors</div><div class="kpi-value">${fmtInt(visitors)}</div></div>
-        <div class="kpi"><div class="kpi-label">Avg Engagement</div><div class="kpi-value">${fmtPct(engN ? engSum / engN : null)}</div></div>
-        <div class="kpi"><div class="kpi-label">Hours Watched</div><div class="kpi-value">${fmtHours(hours)}</div></div>
-        <div class="kpi"><div class="kpi-label">Avg Play Rate</div><div class="kpi-value">${fmtPct(rateN ? rateSum / rateN : null)}</div></div>
-        <div class="kpi"><div class="kpi-label">Page Loads</div><div class="kpi-value">${fmtInt(loads)}</div></div>
+        <div class="kpi"><div class="kpi-label" data-tip="Total number of times any Training Hub video has been played. Each time someone presses play counts as one play, including repeat views by the same person.">Total Plays ⓘ</div><div class="kpi-value">${fmtInt(plays)}</div></div>
+        <div class="kpi"><div class="kpi-label" data-tip="Number of distinct people who visited a video page. One person watching three videos counts as three visitors (one per video page). Repeat visits by the same person to the same video are not double-counted.">Unique Visitors ⓘ</div><div class="kpi-value">${fmtInt(visitors)}</div></div>
+        <div class="kpi"><div class="kpi-label" data-tip="Average percentage of each video watched across all plays, averaged across all videos. 100% means viewers watched every second; 50% means they made it halfway through on average. Health Scores use duration-adjusted benchmarks rather than this flat average.">Avg Engagement ⓘ</div><div class="kpi-value">${fmtPct(engN ? engSum / engN : null)}</div></div>
+        <div class="kpi"><div class="kpi-label" data-tip="Total hours of Training Hub video content consumed. Calculated as plays × video duration × engagement rate, summed across all videos. Reflects the real educational time delivered to users.">Hours Watched ⓘ</div><div class="kpi-value">${fmtHours(hours)}</div></div>
+        <div class="kpi"><div class="kpi-label" data-tip="Percentage of page visitors who clicked play, averaged across all videos. A low play rate suggests viewers aren't compelled to start — often a thumbnail, title, or placement issue. 30% is the target benchmark used in Health Scores.">Avg Play Rate ⓘ</div><div class="kpi-value">${fmtPct(rateN ? rateSum / rateN : null)}</div></div>
+        <div class="kpi"><div class="kpi-label" data-tip="Number of times a page containing a Training Hub video was loaded, regardless of whether the visitor pressed play. Used alongside plays to calculate play rate.">Page Loads ⓘ</div><div class="kpi-value">${fmtInt(loads)}</div></div>
       </div>`;
   }
 
