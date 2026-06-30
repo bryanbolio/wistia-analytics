@@ -31,6 +31,7 @@
     { key: 'count',      label: 'Videos' },
     { key: 'plays',      label: 'Total Plays' },
     { key: 'engagement', label: 'Avg Engagement' },
+    { key: 'avgDuration', label: 'Avg Duration' },
     { key: 'hours',      label: 'Hours Watched' }
   ];
 
@@ -45,6 +46,12 @@
   function fmtHours(h) {
     if (h == null || isNaN(h)) return '—';
     return h < 1 ? Math.round(h * 60) + 'm' : h.toFixed(1) + 'h';
+  }
+  function fmtDuration(secs) {
+    if (secs == null || isNaN(secs)) return '—';
+    const m = Math.floor(secs / 60);
+    const s = Math.round(secs % 60);
+    return m + 'm ' + String(s).padStart(2, '0') + 's';
   }
   function fmtTime(ts) {
     if (!ts) return '';
@@ -156,6 +163,7 @@
           <div class="metric-row"><span class="metric-name">Visitors</span><span class="metric-val">${fmtInt(s.visitors)}</span></div>
           <div class="metric-row"><span class="metric-name">Play Rate</span><span class="metric-val">${fmtPct(s.playRate)}</span></div>
           <div class="metric-row"><span class="metric-name">Engagement</span><span class="metric-val">${fmtPct(s.engagement)}</span></div>
+          <div class="metric-row"><span class="metric-name">Duration</span><span class="metric-val">${fmtDuration(v.duration)}</span></div>
           <div class="metric-row"><span class="metric-name">Page Loads</span><span class="metric-val">${fmtInt(s.pageLoads)}</span></div>
           <div class="metric-row"><span class="metric-name">Hours Watched</span><span class="metric-val">${fmtHours(s.hoursWatched)}</span></div>
         </div>
@@ -181,15 +189,16 @@
     });
 
     const rows = Array.from(groups.entries()).map(([name, vids]) => {
-      let plays = 0, hours = 0, engSum = 0, engN = 0;
+      let plays = 0, hours = 0, engSum = 0, engN = 0, durSum = 0, durN = 0;
       vids.forEach(v => {
+        if (v.duration != null) { durSum += v.duration; durN++; }
         const s = v.stats;
         if (!s) return;
         plays += s.plays        || 0;
         hours += s.hoursWatched || 0;
         if (s.engagement != null) { engSum += s.engagement; engN++; }
       });
-      return { name, count: vids.length, plays, hours, engagement: engN ? engSum / engN : null };
+      return { name, count: vids.length, plays, hours, engagement: engN ? engSum / engN : null, avgDuration: durN ? durSum / durN : null };
     });
 
     const dir = S.sectionSortDir === 'desc' ? -1 : 1;
@@ -211,6 +220,7 @@
         <td>${r.count}</td>
         <td>${fmtInt(r.plays)}</td>
         <td>${fmtPct(r.engagement)}</td>
+        <td>${fmtDuration(r.avgDuration)}</td>
         <td>${fmtHours(r.hours)}</td>
       </tr>`).join('');
 
