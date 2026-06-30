@@ -156,6 +156,41 @@
     return 'rebuild';
   }
 
+  // ── Render: Sparkline ──────────────────────────────────────────────────────
+  function renderSparkline(v) {
+    const d30 = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
+    const pts  = (v.timeline || [])
+      .filter(t => t.date >= d30)
+      .sort((a, b) => a.date.localeCompare(b.date));
+    if (pts.length < 3) return '';
+
+    const W = 200, H = 36, PAD = 2;
+    const vals  = pts.map(t => t.plays);
+    const max   = Math.max(...vals, 1);
+    const min   = Math.min(...vals);
+    const range = max - min || 1;
+
+    const coords = vals.map((p, i) => {
+      const x = (i / (vals.length - 1)) * W;
+      const y = H - PAD - ((p - min) / range) * (H - PAD * 2);
+      return [x, y];
+    });
+    const linePts = coords.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
+    const areaPts = [`0,${H}`, ...coords.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`), `${W},${H}`].join(' ');
+
+    const health = videoHealth(v);
+    const trend  = health && health.trend;
+    const color  = !trend || trend.dir === 'flat' || trend.dir === 'new'
+      ? '#7D8BA5' : trend.dir === 'up' ? '#22C55E' : '#EF4444';
+
+    return `<div class="sparkline-wrap">
+      <svg class="sparkline" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="${areaPts}" fill="${color}" opacity="0.12"/>
+        <polyline points="${linePts}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+      </svg>
+    </div>`;
+  }
+
   // ── Render: KPI Strip ──────────────────────────────────────────────────────
   function renderKPIs(videos) {
     let plays = 0, visitors = 0, hours = 0, loads = 0;
@@ -239,10 +274,11 @@
           <div class="metric-row"><span class="metric-name">Engagement</span><span class="metric-val">${fmtPct(s.engagement)}</span></div>
           <div class="metric-row"><span class="metric-name">Duration</span><span class="metric-val">${fmtDuration(v.duration)}</span></div>
           <div class="metric-row"><span class="metric-name">Hours Watched</span><span class="metric-val">${fmtHours(s.hoursWatched)}</span></div>
-          <div class="metric-row"><span class="metric-name">30d Trend</span><span class="metric-val ${trend.cls}">${trend.text}</span></div>
+          <div class="metric-row"><span class="metric-name metric-tip" title="Compares total plays in the last 30 days vs the prior 30 days (days 31–60). ↑ Up = +10% or more · → Flat = within ±10% · ↓ Down = −10% or more. No data in either window = —">30d Trend ⓘ</span><span class="metric-val ${trend.cls}">${trend.text}</span></div>
           <div class="metric-row"><span class="metric-name">Published</span><span class="metric-val">${fmtDate(v.createdAt)}</span></div>
         </div>
         <div class="engagement-bar"><div class="fill ${engClass(eng)}" style="--bar-w:${pct}%"></div></div>
+        ${renderSparkline(v)}
         <a class="card-link" href="${wUrl}" target="_blank" rel="noopener">View Analytics &amp; Heatmap ↗</a>
       </div>`;
   }
@@ -468,6 +504,80 @@
       </div>`;
   }
 
+  // ── Render: Methodology Panel ──────────────────────────────────────────────
+  function renderMethodologyPanel() {
+    return `
+      <details class="methodology-panel">
+        <summary>How scores are calculated</summary>
+        <div class="methodology-body">
+
+          <div class="methodology-section">
+            <h3 class="methodology-heading">Health Score (0–100)</h3>
+            <p class="methodology-intro">Three dimensions — quality, reach, and momentum — combined into a single number so you can sort and prioritize at a glance.</p>
+
+            <div class="methodology-dim">
+              <div class="methodology-dim-header">
+                <span class="methodology-dim-name">Content Quality</span>
+                <span class="methodology-dim-pts">40 pts max</span>
+              </div>
+              <p>How well does the video hold attention relative to its length? Formula: <code>(engagement ÷ duration benchmark) × 40</code>, capped at 40.</p>
+              <p>Duration benchmarks used: under 2 min → 70% expected · 2–4 min → 60% · 4–7 min → 50% · 7+ min → 40%. A flat engagement threshold would penalize longer content — a 7-minute accounting deep-dive at 48% engagement is doing well, while a 90-second overview at 55% is not. Duration-adjusting makes the comparison fair.</p>
+            </div>
+
+            <div class="methodology-dim">
+              <div class="methodology-dim-header">
+                <span class="methodology-dim-name">Discoverability</span>
+                <span class="methodology-dim-pts">30 pts max</span>
+              </div>
+              <p>Are people watching when they encounter it? Formula: <code>(play rate ÷ 30%) × 30</code>, capped at 30.</p>
+              <p>30% play rate is a strong industry benchmark for embedded educational video. Below it, a meaningful portion of visitors are skipping the video entirely — a signal that placement, thumbnail, or the title isn't pulling people in.</p>
+            </div>
+
+            <div class="methodology-dim">
+              <div class="methodology-dim-header">
+                <span class="methodology-dim-name">Momentum</span>
+                <span class="methodology-dim-pts">30 pts max</span>
+              </div>
+              <p>Is interest growing, holding, or fading? Compares total plays in the last 30 days vs the prior 30 days.</p>
+              <p>Up (+10% or more) = 30 pts · Flat (±10%) = 20 pts · Moderate decline (to −30%) = 10 pts · Severe decline (over −30%) = 0 pts. A video can have strong absolute numbers but still need attention if it's in consistent decline.</p>
+            </div>
+
+            <table class="methodology-table">
+              <thead><tr><th>Score</th><th>Band</th><th>Action</th></tr></thead>
+              <tbody>
+                <tr><td>80–100</td><td><span class="health-badge health-healthy">Healthy</span></td><td>Performing well across all three dimensions. Monitor occasionally.</td></tr>
+                <tr><td>60–79</td><td><span class="health-badge health-monitor">Monitor</span></td><td>One dimension is weak. Track trend over the next refresh cycle.</td></tr>
+                <tr><td>40–59</td><td><span class="health-badge health-attention">Attention</span></td><td>At least two dimensions are underperforming. Review and plan a fix.</td></tr>
+                <tr><td>0–39</td><td><span class="health-badge health-rebuild">Rebuild</span></td><td>Failing on most fronts. Prioritize for rework or removal.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="methodology-section">
+            <h3 class="methodology-heading">Quadrant Analysis</h3>
+            <p class="methodology-intro">Every video is placed into one of four quadrants based on two questions: are people watching when they see it, and when they watch, do they stick around?</p>
+
+            <div class="methodology-dim">
+              <div class="methodology-dim-header"><span class="methodology-dim-name">Axes</span></div>
+              <p><strong>Play Rate (threshold: 25%)</strong> — Are people hitting play when they land on the page? Below 25%, a significant share of visitors are skipping. This measures reach and first impression.</p>
+              <p><strong>Engagement vs. duration benchmark</strong> — Same duration-adjusted benchmarks as the Health Score. This measures whether the content is worth finishing once someone starts.</p>
+            </div>
+
+            <table class="methodology-table">
+              <thead><tr><th>Quadrant</th><th>Signal</th><th>What to do</th></tr></thead>
+              <tbody>
+                <tr><td><strong>High Performers</strong></td><td>High reach + high quality</td><td>Leave these alone. Study what makes them work and apply it elsewhere.</td></tr>
+                <tr><td><strong>Placement Problem</strong></td><td>Low reach + high quality</td><td>Content is good — it's just not being surfaced. Try better thumbnails, placement in the Training Hub, or a mention in onboarding.</td></tr>
+                <tr><td><strong>Content Problem</strong></td><td>High reach + low quality</td><td>People click but don't finish. Review pacing, length, structure, or audio quality. The concept is interesting — the execution isn't landing.</td></tr>
+                <tr><td><strong>Rebuild Needed</strong></td><td>Low reach + low quality</td><td>Neither found nor engaging. Full rework or removal. Start with the ones in the Rebuild band of the Health Score.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+      </details>`;
+  }
+
   // ── Render: Full Page ──────────────────────────────────────────────────────
   function renderAll() {
     const sections = [...new Set(S.videos.map(v => v.section))].sort();
@@ -487,7 +597,8 @@
       renderGrid(filtered) +
       renderSectionTable() +
       renderQuadrantPanel(S.videos) +
-      renderChartPanel();
+      renderChartPanel() +
+      renderMethodologyPanel();
 
     document.getElementById('last-updated').textContent =
       S.fetchedAt ? `Last updated ${fmtTime(S.fetchedAt)}` : '';
