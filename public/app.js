@@ -158,7 +158,7 @@
   }
 
   // ── Render: KPI Strip ──────────────────────────────────────────────────────
-  function renderKPIs(videos) {
+  function renderKPIs(videos, section) {
     let plays = 0, visitors = 0, hours = 0, loads = 0;
     let engSum = 0, engN = 0, rateSum = 0, rateN = 0;
     videos.forEach(v => {
@@ -171,7 +171,11 @@
       if (s.engagement != null) { engSum  += s.engagement; engN++; }
       if (s.playRate   != null) { rateSum += s.playRate;   rateN++; }
     });
+    const scopeLabel = (!section || section === 'all')
+      ? `<div class="kpi-scope-label">All Sections <span class="kpi-scope-count">${videos.length} videos</span></div>`
+      : `<div class="kpi-scope-label kpi-scope-filtered">${escHtml(section)} <span class="kpi-scope-count">${videos.length} videos</span></div>`;
     return `
+      ${scopeLabel}
       <div class="kpi-strip">
         <div class="kpi"><div class="kpi-label" data-tip="Total number of times any Training Hub video has been played. Each time someone presses play counts as one play, including repeat views by the same person.">Total Plays ⓘ</div><div class="kpi-value">${fmtInt(plays)}</div></div>
         <div class="kpi"><div class="kpi-label" data-tip="Number of distinct people who visited a video page. One person watching three videos counts as three visitors (one per video page). Repeat visits by the same person to the same video are not double-counted.">Unique Visitors ⓘ</div><div class="kpi-value">${fmtInt(visitors)}</div></div>
@@ -589,8 +593,13 @@
   function renderAll() {
     const sections = [...new Set(S.videos.map(v => v.section))].sort();
 
-    let filtered = S.videos.slice();
-    if (S.section !== 'all') filtered = filtered.filter(v => v.section === S.section);
+    // Section-scoped videos (no search, no sort) — used for KPIs and quadrant
+    const sectionVideos = S.section === 'all'
+      ? S.videos
+      : S.videos.filter(v => v.section === S.section);
+
+    // Fully filtered + sorted videos for the card grid
+    let filtered = sectionVideos.slice();
     if (S.search) {
       const q = S.search.toLowerCase();
       filtered = filtered.filter(v => v.name.toLowerCase().includes(q));
@@ -599,11 +608,11 @@
     filtered.sort((a, b) => (metricVal(a, S.sortBy) - metricVal(b, S.sortBy)) * dir);
 
     document.getElementById('root').innerHTML =
-      renderKPIs(S.videos) +
+      renderKPIs(sectionVideos, S.section) +
       renderFilterBar(sections) +
       renderGrid(filtered) +
       renderSectionTable() +
-      renderQuadrantPanel(S.videos) +
+      renderQuadrantPanel(sectionVideos) +
       renderChartPanel() +
       renderMethodologyPanel();
 
