@@ -172,15 +172,6 @@
           <div class="metric-row"><span class="metric-name">Published</span><span class="metric-val">${fmtDate(v.createdAt)}</span></div>
         </div>
         <div class="engagement-bar"><div class="fill ${engClass(eng)}" style="--bar-w:${pct}%"></div></div>
-        ${v.embedPages && v.embedPages.length ? `
-        <div class="embed-pages">
-          <div class="embed-pages-label">Top embed pages</div>
-          ${v.embedPages.map(p => `
-            <div class="embed-page-row">
-              <a class="embed-page-url" href="${escHtml(p.url)}" target="_blank" rel="noopener" title="${escHtml(p.url)}">${escHtml(p.url.replace(/^https?:\/\//, ''))}</a>
-              <span class="embed-page-count">${fmtInt(p.count)}</span>
-            </div>`).join('')}
-        </div>` : ''}
         <a class="card-link" href="${wUrl}" target="_blank" rel="noopener">Open in Wistia ↗</a>
       </div>`;
   }
